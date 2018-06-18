@@ -15,13 +15,13 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-import com.sun.glass.events.MouseEvent;
+import java.awt.event.MouseEvent;
 
 public class Server extends JFrame{
 
 	private ServerSocket servidor;
 	private Socket conexion;
-	private ExecutorService ejecutarJuego; //Facilita la gestión de los hilos jugador
+	private ExecutorService ejecutarJuego; //Facilita la gestiï¿½n de los hilos jugador
 	private JTextArea areaSalida;
 	private JPanel contenedorSur;
 	private JButton parar;
@@ -38,14 +38,14 @@ public class Server extends JFrame{
 		areaSalida.setText( "Servidor esperando conexiones\n" );
 		contenedorSur = new JPanel();
 		
-		Escucha evento = new Escucha();
+		EscuchaMouse evento = new EscuchaMouse();
 		parar = new JButton("Parar servidor");
 		parar.addMouseListener(evento);
 		contenedorSur.add(parar);
 		
 		add(contenedorSur, BorderLayout.SOUTH);
 		
-		setSize( 300, 300 ); // establece el tamaño de la ventana
+		setSize( 300, 300 ); // establece el tamaï¿½o de la ventana
 		setVisible( true ); // muestra la ventana
 	}
 	
@@ -124,36 +124,4 @@ public class Server extends JFrame{
 		}
 	}
 	
-	private class Escucha implements MouseListener{
-		@Override
-		public void mouseClicked(java.awt.event.MouseEvent arg0) {
-			mostrarMensaje("[server] Boton clikeado\n");
-			closeServerSocket();
-		}
-
-		@Override
-		public void mouseEntered(java.awt.event.MouseEvent arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void mouseExited(java.awt.event.MouseEvent arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void mousePressed(java.awt.event.MouseEvent arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void mouseReleased(java.awt.event.MouseEvent arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-		
-	}
 }
