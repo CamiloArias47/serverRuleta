@@ -6,6 +6,9 @@ import java.awt.event.MouseListener;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Formatter;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,37 +28,41 @@ public class Server extends JFrame{
 	private JTextArea areaSalida;
 	private JPanel contenedorSur;
 	private JButton parar;
+	/** Array con los jugadores de la ruleta*/
+	//private ArrayList<Player> players = new ArrayList();
+	private Player[] players;
 
 	public Server() {
+		players = new Player[2];
 		Gui();
 		createHost();
 	}
-	
+
 	public void Gui() {
 		areaSalida = new JTextArea(); // crea objeto JTextArea para mostrar la salida
 		areaSalida.setEditable(false);
 		add( areaSalida, BorderLayout.CENTER );
 		areaSalida.setText( "Servidor esperando conexiones\n" );
 		contenedorSur = new JPanel();
-		
+
 		EscuchaMouse evento = new EscuchaMouse();
 		parar = new JButton("Parar servidor");
 		parar.addMouseListener(evento);
 		contenedorSur.add(parar);
-		
+
 		add(contenedorSur, BorderLayout.SOUTH);
-		
+
 		setSize( 300, 300 ); // establece el tama�o de la ventana
 		setVisible( true ); // muestra la ventana
 	}
-	
+
 	public void createHost() {
 		// establece el servidor
 		try{
 			System.out.println("[server] Abriendo puerto");
 			mostrarMensaje("[server] Abriendo puerto\n");
-			servidor = new ServerSocket( 12345, 2 );
-			
+			servidor = new ServerSocket(12345);
+
 		} // fin de try
 		catch ( IOException excepcionES ){
 			excepcionES.printStackTrace();
@@ -64,39 +71,43 @@ public class Server extends JFrame{
 			//System.exit(1); //cierra la aplicacion
 		} // fin de catch
 
-		System.out.println("[server] Puerto abierto");
-		mostrarMensaje("[server] Puerto abierto\n");
+		 mostrarMensaje("[server] server address: "+servidor.getLocalSocketAddress()+"\n");
+		 mostrarMensaje("[server] server puerto: "+servidor.getLocalPort()+"\n");
+
 		conect();
-		
-		//ejecutarJuego = Executors.newFixedThreadPool(1); // crea el administrador de los hilos jugador
+
+		ejecutarJuego = Executors.newFixedThreadPool(4); // crea el administrador de los hilos jugador
 		mostrarMensaje("[server] fin del metodo CreateHost\n");
 	}
 
-	
 	public void conect() {
-		mostrarMensaje("[server] Intentando conectar\n");
-		try {
-			conexion = servidor.accept(); 
-			mostrarMensaje("[server] Esperando conexion\n");
-		} // fin de try
-		catch ( IOException excepcionES ) {
-			mostrarMensaje("[server] Error en conexion\n");
-			excepcionES.printStackTrace();
-			//System.exit(1);
-		} // fin de catch
-		//disconnect();
-		mostrarMensaje("[server] ... \n");
+
+		// espera a que se conecte cada cliente
+		mostrarMensaje("[server] Intentando conectar con clientes\n");
+		for ( int i = 0; i < 4; i++ ) {
+			try {
+				mostrarMensaje("[server] Esperando conexion:"+i+"\n");
+				//Socket jugador = servidor.accept();
+				//mostrarMensaje("[server] Conectado con jugador:"+i+"\n");
+				//players.add(new Player(jugador, i) ); // crea un jugador con la conexion de algun usuario que se conecte
+				players[i] = new Player(servidor.accept(), i);
+				mostrarMensaje("[server] Conectado con jugador:"+i+"\n");
+				//players.get(i).run();
+				mostrarMensaje("[server] total jugadores "+players.length+"\n");
+				mostrarMensaje("[server] jugador "+i+" "+players[i]+"\n");
+				//ejecutarJuego.execute(players.get(i)); // ejecuta el hilo jugador
+				ejecutarJuego.execute(players[i]);
+			} // fin de try
+			catch ( IOException excepcionES ) {
+				mostrarMensaje("[server] Error al conectar con el jugador\n");
+				excepcionES.printStackTrace();
+				//System.exit(1);
+			} // fin de catch
+		} // fin de for
+
+		mostrarMensaje("[server] Todos los jugadores conectados \n");
 	}
-	
-	public void disconnect() {
-		try {
-			conexion.close();
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
+
 	public void closeServerSocket() {
 		mostrarMensaje("[server] cerrando serverSocket\n");
 		try {
@@ -107,7 +118,7 @@ public class Server extends JFrame{
 			e.printStackTrace();
 		}
 	}
-	
+
 	private void mostrarMensaje( final String mensajeAMostrar ){
 		SwingUtilities.invokeLater( new Runnable() {
 										 public void run() {
@@ -116,12 +127,55 @@ public class Server extends JFrame{
 									   } // fin de la clase interna
 								  ); // fin de la llamada a SwingUtilities.invokeLater
 	} // fin del metodo mostrarMensaje
-	
+
 	private class EscuchaMouse extends MouseAdapter{
 		public void mouseClicked( MouseEvent e) {
 			mostrarMensaje("[server] Boton clikeado\n");
 			closeServerSocket();
 		}
 	}
-	
+
+
+
+	private class Player implements Runnable{
+
+		private Socket socket;
+		private int id;
+		private Scanner entrada; // entrada del cliente
+		private Formatter salida; // salida al cliente
+
+		public Player(Socket socket, int id){
+				this.socket = socket;
+				this.id     = id;
+
+				// obtiene los flujos del objeto Socket
+				try {
+					entrada = new Scanner( this.socket.getInputStream() );
+					salida = new Formatter( this.socket.getOutputStream() );
+					salida.flush();
+				}
+				catch ( IOException excepcionES ){
+					mostrarMensaje("[server] Error al obtener canales de entrada y salida\n");
+					excepcionES.printStackTrace();
+					//System.exit( 1 );
+				} // fin de catch
+		}
+
+		public void run(){
+			mostrarMensaje("[server] Jugador "+id+" conectado \n");
+			salida.format( "%s\n", "Conectado al servidor" ); // envia la marca del jugador
+			salida.flush(); // vacia la salida
+		}
+
+		public void disconnect() {
+			try {
+				conexion.close();
+			}
+			catch(IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+
 }
