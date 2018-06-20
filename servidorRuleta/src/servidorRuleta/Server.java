@@ -28,12 +28,20 @@ public class Server extends JFrame{
 	private JTextArea areaSalida;
 	private JPanel contenedorSur;
 	private JButton parar;
+
+	/** iterador que ira aumentando para facilitar el repaint de la img.*/
+	private int iteradorImagen=0;
+	/** Atributo que se toma como temporizzador*/
+	private int timeRuleta = 400;
+
 	/** Array con los jugadores de la ruleta*/
 	//private ArrayList<Player> players = new ArrayList();
 	private Player[] players;
 
 	public Server() {
 		players = new Player[2];
+		ejecutarJuego = Executors.newFixedThreadPool(4); // crea el administrador de los hilos jugador
+
 		Gui();
 		createHost();
 	}
@@ -75,13 +83,10 @@ public class Server extends JFrame{
 		 mostrarMensaje("[server] server puerto: "+servidor.getLocalPort()+"\n");
 
 		conect();
-
-		ejecutarJuego = Executors.newFixedThreadPool(4); // crea el administrador de los hilos jugador
 		mostrarMensaje("[server] fin del metodo CreateHost\n");
 	}
 
 	public void conect() {
-
 		// espera a que se conecte cada cliente
 		mostrarMensaje("[server] Intentando conectar con clientes\n");
 		for ( int i = 0; i < 4; i++ ) {
@@ -128,13 +133,34 @@ public class Server extends JFrame{
 								  ); // fin de la llamada a SwingUtilities.invokeLater
 	} // fin del metodo mostrarMensaje
 
+  public void girarRuleta(){
+		//esperar que la ruleta pare
+		Thread delayGiro = new Thread(){
+            public synchronized void run(){
+							try{
+								while(timeRuleta>0){
+									timeRuleta-=1;
+									iteradorImagen = iteradorImagen+1;
+									players[0].sendMesageToClient(Integer.toString(iteradorImagen) );
+									Thread.sleep(10);
+								}
+
+							}catch(InterruptedException e) {
+								return;
+							}
+            }
+		};
+
+		timeRuleta = 400;
+		delayGiro.start();
+	}
+
 	private class EscuchaMouse extends MouseAdapter{
 		public void mouseClicked( MouseEvent e) {
 			mostrarMensaje("[server] Boton clikeado\n");
 			closeServerSocket();
 		}
 	}
-
 
 
 	private class Player implements Runnable{
@@ -162,9 +188,16 @@ public class Server extends JFrame{
 		}
 
 		public void run(){
-			mostrarMensaje("[server] Jugador "+id+" conectado \n");
-			salida.format( "%s\n", "Conectado al servidor" ); // envia la marca del jugador
+			mostrarMensaje("[server] run() = Jugador "+id+" conectado \n");
+			salida.format( "%s\n", "Conectado al servidor" );
 			salida.flush(); // vacia la salida
+
+			girarRuleta();
+		}
+
+		public void sendMesageToClient(String msn){
+			salida.format("%s\n", msn);
+			salida.flush();
 		}
 
 		public void disconnect() {
